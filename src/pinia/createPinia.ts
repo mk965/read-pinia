@@ -3,12 +3,14 @@ import { ref, App, markRaw, effectScope, isVue2, Ref } from 'vue-demi';
 import { registerPiniaDevtools, devtoolsPlugin } from './devtools';
 import { USE_DEVTOOLS } from './env';
 import { StateTree, StoreGeneric } from './types';
+import Log from '../utils/log';
 
 /**
  * 创建应用程序要使用的Pinia实例
  */
 export function createPinia(): Pinia {
-	console.log('🍍 createPinia run!');
+	Log("createPinia()");
+
 	/**
 	 * effectScope:
 	 * 创建一个 effect 作用域，可以捕获其中所创建的响应式副作用 (即计算属性和侦听器)，这样捕获到的副作用可以一起处理。对于该 API 的使用细节，请查阅对应的 RFC。
@@ -27,6 +29,7 @@ export function createPinia(): Pinia {
 	const pinia: Pinia = markRaw({
 		// app.use 执行的逻辑
 		install(app: App) {
+			Log('createPinia 插件的 install 阶段');
 			// 设置当前使用的 pinia 实例
 			setActivePinia(pinia);
 			// 如果是 vue2 ，全局注册已经在 PiniaVuePlugin 完成，所以这段逻辑将跳过
