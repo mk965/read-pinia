@@ -75,9 +75,7 @@ export function setMapStoreSuffix(
 }
 
 /**
- * Allows using stores without the composition API (`setup()`) by generating an
- * object to be spread in the `computed` field of a component. It accepts a list
- * of store definitions.
+ * 通过生成一个对象，传递到组件的 computed 字段 以允许在不使用组合式 API(setup())的情况下使用 store。 它接受一个 store 定义的列表参数。
  *
  * @example
  * ```js
@@ -94,11 +92,13 @@ export function setMapStoreSuffix(
  * }
  * ```
  *
- * @param stores - list of stores to map to an object
+ * @param stores - 要映射到 object 的 stores 列表
  */
 export function mapStores<Stores extends any[]>(
+  // 所有参数放入 stores 数组，所以 store 不需要在包裹一层数组
   ...stores: [...Stores]
 ): _Spread<Stores> {
+  // 直接将 store 通过参数传递即可，不需要放到数组中，如果放到了数组中就抛出警告
   if (__DEV__ && Array.isArray(stores[0])) {
     console.warn(
       `[🍍]: Directly pass all stores to "mapStores()" without putting them in an array:\n` +
@@ -111,7 +111,9 @@ export function mapStores<Stores extends any[]>(
     stores = stores[0]
   }
 
+  // 遍历所有传进来的 useStore 并执行，然后 return 出去就得到了所有的 store
   return stores.reduce((reduced, useStore) => {
+    // $id 是 defineStore 添加的
     // @ts-expect-error: $id is added by defineStore
     reduced[useStore.$id + mapStoreSuffix] = function (
       this: ComponentPublicInstance
@@ -159,13 +161,7 @@ export type _MapStateObjectReturn<
 }
 
 /**
- * Allows using state and getters from one store without using the composition
- * API (`setup()`) by generating an object to be spread in the `computed` field
- * of a component. The values of the object are the state properties/getters
- * while the keys are the names of the resulting computed properties.
- * Optionally, you can also pass a custom function that will receive the store
- * as its first argument. Note that while it has access to the component
- * instance via `this`, it won't be typed.
+ * 通过生成一个对象，并传递至组件的 computed 字段， 以允许在不使用组合式 API(setup())的情况下使用一个 store 的 state 和 getter。 该对象的值是 state 属性/getter， 而键是生成的计算属性名称。 你也可以选择传递一个自定义函数，该函数将接收 store 作为其第一个参数。 注意，虽然它可以通过 this 访问组件实例，但它没有标注类型。
  *
  * @example
  * ```js
@@ -191,8 +187,8 @@ export type _MapStateObjectReturn<
  * }
  * ```
  *
- * @param useStore - store to map from
- * @param keyMapper - object of state properties or getters
+ * @param useStore - defineStore 中返回的 useStore
+ * @param keyMapper - state 的属性名 或 getters 的对象
  */
 export function mapState<
   Id extends string,
@@ -228,8 +224,8 @@ export function mapState<
  * }
  * ```
  *
- * @param useStore - store to map from
- * @param keys - array of state properties or getters
+ * @param useStore - defineStore 中返回的 useStore
+ * @param keys - state 的属性名 或 getters 的数组
  */
 export function mapState<
   Id extends string,
@@ -239,6 +235,7 @@ export function mapState<
   Keys extends keyof S | keyof G
 >(
   useStore: StoreDefinition<Id, S, G, A>,
+  // key数组，内容仅限于 State 和 Getter 的 key
   keys: readonly Keys[]
 ): _MapStateReturn<S, G, Keys>
 
@@ -247,7 +244,7 @@ export function mapState<
  * API (`setup()`) by generating an object to be spread in the `computed` field
  * of a component.
  *
- * @param useStore - store to map from
+ * @param useStore - defineStore 中返回的 useStore
  * @param keysOrMapper - array or object
  */
 export function mapState<
@@ -259,9 +256,11 @@ export function mapState<
   useStore: StoreDefinition<Id, S, G, A>,
   keysOrMapper: any
 ): _MapStateReturn<S, G> | _MapStateObjectReturn<Id, S, G, A> {
+  // 此处逻辑和 mapAction 很像
   return Array.isArray(keysOrMapper)
     ? keysOrMapper.reduce((reduced, key) => {
         reduced[key] = function (this: ComponentPublicInstance) {
+          // 和 mapAction 的区别：mapAction 取出的是经过 wrapAction 的 action ，然后在这调用了一下
           return useStore(this.$pinia)[key]
         } as () => any
         return reduced
@@ -271,8 +270,7 @@ export function mapState<
         reduced[key] = function (this: ComponentPublicInstance) {
           const store = useStore(this.$pinia)
           const storeKey = keysOrMapper[key]
-          // for some reason TS is unable to infer the type of storeKey to be a
-          // function
+          // 由于某种原因，TS 无法将 storeKey 的类型推断为函数
           return typeof storeKey === 'function'
             ? (storeKey as (store: Store<Id, S, G, A>) => any).call(this, store)
             : store[storeKey]
@@ -302,10 +300,8 @@ export type _MapActionsObjectReturn<A, T extends Record<string, keyof A>> = {
 }
 
 /**
- * Allows directly using actions from your store without using the composition
- * API (`setup()`) by generating an object to be spread in the `methods` field
- * of a component. The values of the object are the actions while the keys are
- * the names of the resulting methods.
+ * 这个方法需要传入 useStore 和一个对象，可以在导入过程中给 action 改名，对象 key 为 action 的新名字，value 为 action 的旧名字
+ * 通过生成一个传递到组件的 methods 字段的对象， 允许直接使用 store 的 action，而不需要使用组合式 API(setup())。 该对象的值是 action， 而键是产生的方法名称。
  *
  * @example
  * ```js
@@ -323,8 +319,8 @@ export type _MapActionsObjectReturn<A, T extends Record<string, keyof A>> = {
  * }
  * ```
  *
- * @param useStore - store to map from
- * @param keyMapper - object to define new names for the actions
+ * @param useStore - defineStore 返回的 useStore
+ * @param keyMapper - 为 action 定义新名称的对象
  */
 export function mapActions<
   Id extends string,
@@ -337,9 +333,8 @@ export function mapActions<
   keyMapper: KeyMapper
 ): _MapActionsObjectReturn<A, KeyMapper>
 /**
- * Allows directly using actions from your store without using the composition
- * API (`setup()`) by generating an object to be spread in the `methods` field
- * of a component.
+ * 这个方法需要传入 useStore 和一个数组，数组内容为需要导入的 action 名称
+ * 通过生成一个传递到组件的 methods 字段的对象， 允许直接使用 store 的 action，而不需要使用组合式 API(setup())。 该对象的值是 action， 而键是产生的方法名称。
  *
  * @example
  * ```js
@@ -356,8 +351,8 @@ export function mapActions<
  * }
  * ```
  *
- * @param useStore - store to map from
- * @param keys - array of action names to map
+ * @param useStore - defineStore 返回的 useStore
+ * @param keys - 要映射的 action 名称数组
  */
 export function mapActions<
   Id extends string,
@@ -369,11 +364,9 @@ export function mapActions<
   keys: Array<keyof A>
 ): _MapActionsReturn<A>
 /**
- * Allows directly using actions from your store without using the composition
- * API (`setup()`) by generating an object to be spread in the `methods` field
- * of a component.
+ * 通过生成一个传递到组件的 methods 字段的对象， 允许直接使用 store 的 action，而不需要使用组合式 API(setup())。 该对象的值是 action， 而键是产生的方法名称。
  *
- * @param useStore - store to map from
+ * @param useStore - defineStore 返回的 useStore
  * @param keysOrMapper - array or object
  */
 export function mapActions<
@@ -387,9 +380,11 @@ export function mapActions<
   keysOrMapper: Array<keyof A> | KeyMapper
 ): _MapActionsReturn<A> | _MapActionsObjectReturn<A, KeyMapper> {
   return Array.isArray(keysOrMapper)
+    // 如果传入的是数组，遍历这个数组取出所有 action 名称
     ? keysOrMapper.reduce((reduced, key) => {
         // @ts-expect-error
         reduced[key] = function (
+          // 如果组件的具体类型无法获得，或者你并不关心组件的具体类型，那么可以使用 ComponentPublicInstance
           this: ComponentPublicInstance,
           ...args: any[]
         ) {
@@ -397,7 +392,9 @@ export function mapActions<
         }
         return reduced
       }, {} as _MapActionsReturn<A>)
+    // 如果传入的是对象，keysOrMapper[key] 值为 action 名称
     : Object.keys(keysOrMapper).reduce((reduced, key: keyof KeyMapper) => {
+        // key 为新 name 
         // @ts-expect-error
         reduced[key] = function (
           this: ComponentPublicInstance,
@@ -433,9 +430,7 @@ export type _MapWritableStateObjectReturn<
 }
 
 /**
- * Same as `mapState()` but creates computed setters as well so the state can be
- * modified. Differently from `mapState()`, only `state` properties can be
- * added.
+ * 除了创建的计算属性的 setter，其他与 mapState() 相同， 所以 state 可以被修改。 与 mapState() 不同的是，只有 state 属性可以被添加。
  *
  * @param useStore - store to map from
  * @param keyMapper - object of state properties
@@ -491,6 +486,8 @@ export function mapWritableState<
   useStore: StoreDefinition<Id, S, G, A>,
   keysOrMapper: Array<keyof S> | KeyMapper
 ): _MapWritableStateReturn<S> | _MapWritableStateObjectReturn<S, KeyMapper> {
+  // 也是对于数组和对象的分别处理
+  // 返回包含 get 和 set 函数的对象，交给 computed 处理
   return Array.isArray(keysOrMapper)
     ? keysOrMapper.reduce((reduced, key) => {
         // @ts-ignore
@@ -516,6 +513,7 @@ export function mapWritableState<
             return (useStore(this.$pinia)[keysOrMapper[key]] = value as any)
           },
         }
+        console.log(reduced)
         return reduced
       }, {} as _MapWritableStateObjectReturn<S, KeyMapper>)
 }

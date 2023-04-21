@@ -3,6 +3,11 @@ export const useStore = defineStore('store', {
 	state: () => ({
 		count: 1,
 	}),
+	getters: {
+		square(state) {
+			return Math.pow(state.count, 2);
+		},
+	},
 	actions: {
 		increment() {
 			this.count++;

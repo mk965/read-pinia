@@ -16,7 +16,7 @@ const patch = () => {
 }
 
 store.$subscribe(() => {
-  console.log("hello")
+  console.log("订阅收到通知")
 })
 
 
