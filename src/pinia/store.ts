@@ -668,7 +668,7 @@ function createSetupStore<
     }
   }
 
-  // 添加 state、getter 和 action 属性
+  // 添加 state、getters 和 action 属性到 store 中
   /* istanbul ignore if */
   if (isVue2) {
     Object.keys(setupStore).forEach((key) => {
@@ -679,7 +679,7 @@ function createSetupStore<
     // 允许使用 `storeToRefs()` 检索 reactive 对象。 必须在分配给 reactive 对象后调用。
     /**
      * storeToRefs(): https://pinia.vuejs.org/zh/api/modules/pinia.html#storetorefs
-     * 创建一个引用对象，包含 store 的所有 state、 getter 和 plugin 添加的 state 属性。 类似于 toRefs()，但专门为 Pinia store 设计， 所以 method 和非响应式属性会被完全忽略。
+     * 创建一个引用对象，包含 store 的所有 state、 getters 和 plugin 添加的 state 属性。 类似于 toRefs()，但专门为 Pinia store 设计， 所以 method 和非响应式属性会被完全忽略。
      */
     // 使 `storeToRefs()` 与 `reactive()` 一起工作#799
     assign(toRaw(store), setupStore)
